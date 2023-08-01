@@ -30,7 +30,6 @@
 
 /// scope options that are used to customize the consent screen UI
 class TruecallerSdkScope {
-
   static const int FOOTER_TYPE_SKIP = 1;
   static const int FOOTER_TYPE_ANOTHER_MOBILE_NO = 2;
   static const int FOOTER_TYPE_ANOTHER_METHOD = 4;
@@ -85,7 +84,4 @@ class TruecallerSdkScope {
   static const int CTA_TEXT_CONTINUE = 1;
   static const int CTA_TEXT_ACCEPT = 2;
   static const int CTA_TEXT_CONFIRM = 3;
-  
-  
-
 }

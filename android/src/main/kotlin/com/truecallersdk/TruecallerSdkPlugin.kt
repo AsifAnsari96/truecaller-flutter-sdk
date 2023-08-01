@@ -32,17 +32,16 @@ package com.truecallersdk
 
 import android.app.Activity
 import android.content.Intent
+import android.widget.Toast
 import androidx.annotation.NonNull
 import androidx.fragment.app.FragmentActivity
 import com.google.gson.Gson
-
+import com.truecaller.android.sdk.oAuth.CodeVerifierUtil
 import com.truecaller.android.sdk.oAuth.TcOAuthCallback
 import com.truecaller.android.sdk.oAuth.TcOAuthData
 import com.truecaller.android.sdk.oAuth.TcOAuthError
 import com.truecaller.android.sdk.oAuth.TcSdk
 import com.truecaller.android.sdk.oAuth.TcSdkOptions
-import com.truecaller.android.sdk.oAuth.TcSdkOptions.ConsentTitleOptions
-import com.truecaller.android.sdk.oAuth.TcSdkOptions.SdkOptions
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -54,7 +53,10 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry
 import io.flutter.plugin.common.PluginRegistry.Registrar
+import java.math.BigInteger
+import java.security.SecureRandom
 import java.util.Locale
+
 
 const val INITIATE_SDK = "initiateSDK"
 const val IS_USABLE = "isUsable"
@@ -79,6 +81,8 @@ public class TruecallerSdkPlugin : FlutterPlugin, MethodCallHandler, EventChanne
     private var eventChannel: EventChannel? = null
     private var eventSink: EventChannel.EventSink? = null
     private var activity: Activity? = null
+    private var codeVerifier: String = ""
+
     private val gson = Gson()
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
@@ -131,7 +135,25 @@ public class TruecallerSdkPlugin : FlutterPlugin, MethodCallHandler, EventChanne
             }
             GET_PROFILE -> {
                 activity?.let {
-                    TcSdk.getInstance().getAuthorizationCode(it as FragmentActivity) } ?: result.error(
+                    val stateRequested = BigInteger(130, SecureRandom()).toString(32)
+                    TcSdk.getInstance().setOAuthState(stateRequested)
+
+
+                    TcSdk.getInstance().setOAuthScopes(arrayOf("phone","profile"))
+
+                    codeVerifier = CodeVerifierUtil.generateRandomCodeVerifier()
+
+                    val codeChallenge : String? = CodeVerifierUtil.getCodeChallenge(codeVerifier)
+                    codeChallenge?.let {
+                        TcSdk.getInstance().setCodeChallenge(it)
+                    } ?: result.error(
+                        "UNAVAILABLE",
+                        "Code challenge not available",
+                        null)
+
+                    TcSdk.getInstance().getAuthorizationCode(it as FragmentActivity)
+
+                } ?: result.error(
                     "UNAVAILABLE",
                     "Activity not available.",
                     null
@@ -190,6 +212,7 @@ public class TruecallerSdkPlugin : FlutterPlugin, MethodCallHandler, EventChanne
 
 
 
+
             TcSdkOptions.Builder(it, tcOAuthCallback)
                 .sdkOptions(call.argument<Int>(Constants.SDK_OPTION) ?: TcSdkOptions.OPTION_VERIFY_ONLY_TC_USERS)
                 .buttonColor(call.argument<Long>(Constants.BTN_CLR)?.toInt() ?: 0)
@@ -202,20 +225,20 @@ public class TruecallerSdkPlugin : FlutterPlugin, MethodCallHandler, EventChanne
                 .build()
 
 
-           /* TruecallerSdkScope.Builder(it, sdkCallback)
-                .sdkOptions(call.argument<Int>(Constants.SDK_OPTION) ?: TruecallerSdkScope.SDK_OPTION_WITHOUT_OTP)
-                .consentMode(call.argument<Int>(Constants.CONSENT_MODE) ?: TruecallerSdkScope.CONSENT_MODE_BOTTOMSHEET)
-                .consentTitleOption(call.argument<Int>(Constants.CONSENT_TITLE) ?: TruecallerSdkScope.SDK_CONSENT_TITLE_GET_STARTED)
-                .footerType(call.argument<Int>(Constants.FOOTER_TYPE) ?: TruecallerSdkScope.FOOTER_TYPE_SKIP)
-                .loginTextPrefix(call.argument<Int>(Constants.LOGIN_TEXT_PRE) ?: TruecallerSdkScope.LOGIN_TEXT_PREFIX_TO_GET_STARTED)
-                .loginTextSuffix(call.argument<Int>(Constants.LOGIN_TEXT_SUF) ?: TruecallerSdkScope.LOGIN_TEXT_SUFFIX_PLEASE_LOGIN)
-                .ctaTextPrefix(call.argument<Int>(Constants.CTA_TEXT_PRE) ?: TruecallerSdkScope.CTA_TEXT_PREFIX_USE)
-                .privacyPolicyUrl(call.argument<String>(Constants.PP_URL) ?: "")
-                .termsOfServiceUrl(call.argument<String>(Constants.TOS_URL) ?: "")
-                .buttonShapeOptions(call.argument<Int>(Constants.BTN_SHAPE) ?: TruecallerSdkScope.BUTTON_SHAPE_ROUNDED)
-                .buttonColor(call.argument<Long>(Constants.BTN_CLR)?.toInt() ?: 0)
-                .buttonTextColor(call.argument<Long>(Constants.BTN_TXT_CLR)?.toInt() ?: 0)
-                .build()*/
+            /* TruecallerSdkScope.Builder(it, sdkCallback)
+                 .sdkOptions(call.argument<Int>(Constants.SDK_OPTION) ?: TruecallerSdkScope.SDK_OPTION_WITHOUT_OTP)
+                 .consentMode(call.argument<Int>(Constants.CONSENT_MODE) ?: TruecallerSdkScope.CONSENT_MODE_BOTTOMSHEET)
+                 .consentTitleOption(call.argument<Int>(Constants.CONSENT_TITLE) ?: TruecallerSdkScope.SDK_CONSENT_TITLE_GET_STARTED)
+                 .footerType(call.argument<Int>(Constants.FOOTER_TYPE) ?: TruecallerSdkScope.FOOTER_TYPE_SKIP)
+                 .loginTextPrefix(call.argument<Int>(Constants.LOGIN_TEXT_PRE) ?: TruecallerSdkScope.LOGIN_TEXT_PREFIX_TO_GET_STARTED)
+                 .loginTextSuffix(call.argument<Int>(Constants.LOGIN_TEXT_SUF) ?: TruecallerSdkScope.LOGIN_TEXT_SUFFIX_PLEASE_LOGIN)
+                 .ctaTextPrefix(call.argument<Int>(Constants.CTA_TEXT_PRE) ?: TruecallerSdkScope.CTA_TEXT_PREFIX_USE)
+                 .privacyPolicyUrl(call.argument<String>(Constants.PP_URL) ?: "")
+                 .termsOfServiceUrl(call.argument<String>(Constants.TOS_URL) ?: "")
+                 .buttonShapeOptions(call.argument<Int>(Constants.BTN_SHAPE) ?: TruecallerSdkScope.BUTTON_SHAPE_ROUNDED)
+                 .buttonColor(call.argument<Long>(Constants.BTN_CLR)?.toInt() ?: 0)
+                 .buttonTextColor(call.argument<Long>(Constants.BTN_TXT_CLR)?.toInt() ?: 0)
+                 .build()*/
         }
     }
 
@@ -226,15 +249,22 @@ public class TruecallerSdkPlugin : FlutterPlugin, MethodCallHandler, EventChanne
 
 
         override fun onSuccess(tcOAuthData: TcOAuthData) {
+            val jsonElement = gson.toJsonTree(tcOAuthData)
+            jsonElement.asJsonObject.addProperty("codeVerifier", codeVerifier);
+
             eventSink?.success(
                 mapOf(
                     Constants.RESULT to Constants.SUCCESS,
-                    Constants.DATA to gson.toJson(tcOAuthData)
+                    Constants.DATA to
+                            gson.toJson(jsonElement)
+
                 )
             )
         }
 
         override fun onFailure(tcOAuthError: TcOAuthError) {
+
+
             eventSink?.success(
                 mapOf(
                     Constants.RESULT to Constants.FAILURE,
@@ -244,6 +274,7 @@ public class TruecallerSdkPlugin : FlutterPlugin, MethodCallHandler, EventChanne
         }
 
         override fun onVerificationRequired(tcOAuthError: TcOAuthError?) {
+
             eventSink?.success(
                 mapOf(
                     Constants.RESULT to Constants.VERIFICATION,
