@@ -58,13 +58,13 @@ def sdkVariant = "flutter"
 def sdkVariantVersion = "0.1.2"
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 34
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
     }
     defaultConfig {
-        minSdkVersion 22
+        minSdkVersion 24
         resValue("string", "sdk_variant", "${sdkVariant}")
         resValue("string", "sdk_variant_version", "${sdkVariantVersion}")
     }
